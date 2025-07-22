@@ -2,18 +2,21 @@
 
 
 
-
 // const express = require("express");
 // const cors = require("cors");
 // const jwt = require("jsonwebtoken");
 // const cookieParser = require("cookie-parser");
 // const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+// const Stripe = require("stripe"); // ✅ Stripe added
 // require("dotenv").config();
 
 // const app = express();
 // const port = process.env.PORT || 5000;
 
-// // ✅ PROPER CORS
+// // ✅ Stripe Setup
+// const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+
+// // ✅ CORS Setup
 // const corsOptions = {
 //   origin: [
 //     "http://localhost:5173",
@@ -25,7 +28,7 @@
 // app.use(express.json());
 // app.use(cookieParser());
 
-// // 🔗 MongoDB Setup
+// // ✅ MongoDB Setup
 // const uri = process.env.MONGODB_URI;
 // const client = new MongoClient(uri, {
 //   serverApi: ServerApiVersion.v1,
@@ -35,6 +38,7 @@
 // let categoryCollection;
 // let medicineCollection;
 // let advertiseCollection;
+// let paymentsCollection; // ✅ NEW collection for payments
 
 // async function connectDB() {
 //   try {
@@ -43,6 +47,7 @@
 //     categoryCollection = db.collection("categories");
 //     medicineCollection = db.collection("medicines");
 //     advertiseCollection = db.collection("advertised");
+//     paymentsCollection = db.collection("payments"); // ✅ Added
 //     console.log("✅ MongoDB connected");
 //   } catch (err) {
 //     console.error("MongoDB connection failed:", err.message);
@@ -50,7 +55,7 @@
 // }
 // connectDB();
 
-// // 🔒 JWT Middleware
+// // 🔐 JWT Middleware
 // const verifyToken = (req, res, next) => {
 //   const authHeader = req.headers.authorization;
 //   if (!authHeader) return res.status(401).send("Unauthorized");
@@ -174,7 +179,7 @@
 //   }
 // });
 
-// // ✅ ✅ ✅ ALL Medicines for Shop Page
+// // ✅ ALL Medicines for Shop Page
 // app.get("/medicines", async (req, res) => {
 //   try {
 //     const result = await medicineCollection.find().toArray();
@@ -182,6 +187,20 @@
 //   } catch (error) {
 //     console.error("❌ Failed to fetch all medicines:", error.message);
 //     res.status(500).send({ error: "Failed to fetch all medicines" });
+//   }
+// });
+
+// // ✅ 💳 Payments POST route (Challenge Part)
+// app.post("/payments", verifyToken, async (req, res) => {
+//   try {
+//     const paymentInfo = req.body;
+//     paymentInfo.createdAt = new Date();
+
+//     const result = await paymentsCollection.insertOne(paymentInfo);
+//     res.send(result);
+//   } catch (error) {
+//     console.error("❌ Failed to save payment:", error.message);
+//     res.status(500).send({ error: "Payment failed to record." });
 //   }
 // });
 
