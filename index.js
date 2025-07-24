@@ -1,287 +1,21 @@
-// const express = require("express");
-// const cors = require("cors");
-// const jwt = require("jsonwebtoken");
-// const cookieParser = require("cookie-parser");
-// const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-// const Stripe = require("stripe");
-// require("dotenv").config();
-
-// const app = express();
-// const port = process.env.PORT || 5000;
-
-// // ✅ Stripe Setup
-// const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-
-// // ✅ CORS Setup
-// const corsOptions = {
-//   origin: [
-//     "http://localhost:5173",
-//     "https://medimart-client.web.app"
-//   ],
-//   credentials: true,
-// };
-// app.use(cors(corsOptions));
-// app.use(express.json());
-// app.use(cookieParser());
-
-// // ✅ MongoDB Setup
-// const uri = process.env.MONGODB_URI;
-// const client = new MongoClient(uri, {
-//   serverApi: ServerApiVersion.v1,
-// });
-
-// let usersCollection;
-// let categoryCollection;
-// let medicineCollection;
-// let advertiseCollection;
-// let paymentsCollection;
-
-// async function connectDB() {
-//   try {
-//     const db = client.db("medimartDB");
-//     usersCollection = db.collection("users");
-//     categoryCollection = db.collection("categories");
-//     medicineCollection = db.collection("medicines");
-//     advertiseCollection = db.collection("advertised");
-//     paymentsCollection = db.collection("payments");
-//     console.log("✅ MongoDB connected");
-//   } catch (err) {
-//     console.error("MongoDB connection failed:", err.message);
-//   }
-// }
-// connectDB();
-
-// // 🔐 JWT Middleware
-// const verifyToken = (req, res, next) => {
-//   const authHeader = req.headers.authorization;
-//   if (!authHeader) return res.status(401).send("Unauthorized");
-//   const token = authHeader.split(" ")[1];
-
-//   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-//     if (err) return res.status(403).send("Forbidden");
-//     req.user = decoded;
-//     next();
-//   });
-// };
-
-// // ✅ Health Check
-// app.get("/", (req, res) => {
-//   res.send("💊 MediMart Server is Running!");
-// });
-
-// // ✅ JWT Token Generator
-// app.post("/jwt", async (req, res) => {
-//   const user = req.body;
-//   const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
-//   res.send({ token });
-// });
-
-// // ✅ Advertised Medicines
-// app.get("/advertised", async (req, res) => {
-//   try {
-//     const result = await advertiseCollection.find({ isActive: true }).toArray();
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to load advertised products" });
-//   }
-// });
-
-// app.post("/advertised", verifyToken, async (req, res) => {
-//   try {
-//     const item = req.body;
-
-//     if (!item.name || !item.image || !item.description) {
-//       return res.status(400).send({ error: "Missing required fields" });
-//     }
-
-//     const newAdvertise = {
-//       name: item.name,
-//       image: item.image,
-//       description: item.description,
-//       isActive: true,
-//       createdAt: new Date(),
-//     };
-
-//     const result = await advertiseCollection.insertOne(newAdvertise);
-//     res.status(201).send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to add advertised product" });
-//   }
-// });
-
-// // ✅ Categories
-// app.get("/categories", async (req, res) => {
-//   try {
-//     const result = await categoryCollection.find().toArray();
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to fetch categories" });
-//   }
-// });
-
-// app.post("/categories", verifyToken, async (req, res) => {
-//   try {
-//     const category = req.body;
-//     const result = await categoryCollection.insertOne(category);
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to add category" });
-//   }
-// });
-
-// app.put("/categories/:id", verifyToken, async (req, res) => {
-//   try {
-//     const id = req.params.id;
-//     const updated = req.body;
-//     const result = await categoryCollection.updateOne(
-//       { _id: new ObjectId(id) },
-//       { $set: updated }
-//     );
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to update category" });
-//   }
-// });
-
-// app.delete("/categories/:id", verifyToken, async (req, res) => {
-//   try {
-//     const id = req.params.id;
-//     const result = await categoryCollection.deleteOne({ _id: new ObjectId(id) });
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to delete category" });
-//   }
-// });
-
-// // ✅ Category-wise Medicines
-// app.get("/category/:id", async (req, res) => {
-//   const categoryId = req.params.id;
-//   console.log("🔥 Requested categoryId:", categoryId);
-
-//   let query;
-//   try {
-//     query = { categoryId: new ObjectId(categoryId) };
-//   } catch {
-//     query = { categoryId };
-//   }
-
-//   try {
-//     const result = await medicineCollection.find(query).toArray();
-//     console.log("✅ Category Medicines:", result);
-//     res.send(result);
-//   } catch (error) {
-//     console.error("❌ Failed to fetch category medicines:", error.message);
-//     res.status(500).send({ error: "Failed to fetch medicines for this category" });
-//   }
-// });
-
-// // ✅ ALL Medicines for Shop Page
-// app.get("/medicines", async (req, res) => {
-//   try {
-//     const result = await medicineCollection.find().toArray();
-//     res.send(result);
-//   } catch (error) {
-//     console.error("❌ Failed to fetch all medicines:", error.message);
-//     res.status(500).send({ error: "Failed to fetch all medicines" });
-//   }
-// });
-
-// // ✅ Discounted Medicines Only
-// app.get("/medicines/discounted", async (req, res) => {
-//   try {
-//     const result = await medicineCollection.find({
-//       discountedPrice: { $exists: true, $ne: null },
-//     }).toArray();
-//     res.send(result);
-//   } catch (error) {
-//     console.error("❌ Failed to fetch discounted medicines:", error.message);
-//     res.status(500).send({ error: "Failed to fetch discounted medicines" });
-//   }
-// });
-
-// // ✅ Payments
-// app.post("/payments", verifyToken, async (req, res) => {
-//   try {
-//     const paymentInfo = req.body;
-//     paymentInfo.createdAt = new Date();
-
-//     const result = await paymentsCollection.insertOne(paymentInfo);
-//     res.send(result);
-//   } catch (error) {
-//     console.error("❌ Failed to save payment:", error.message);
-//     res.status(500).send({ error: "Payment failed to record." });
-//   }
-// });
-
-// // ✅ ADMIN: Get All Payments (for revenue + manage)
-// app.get("/admin/payments", verifyToken, async (req, res) => {
-//   try {
-//     const payments = await paymentsCollection.find().toArray();
-//     res.send(payments);
-//   } catch (error) {
-//     console.error("❌ Failed to fetch payments:", error.message);
-//     res.status(500).send({ error: "Failed to fetch payments" });
-//   }
-// });
-
-// // ✅ ADMIN: Update Payment Status
-// app.put("/admin/payments/:id", verifyToken, async (req, res) => {
-//   const id = req.params.id;
-//   try {
-//     const result = await paymentsCollection.updateOne(
-//       { _id: new ObjectId(id) },
-//       { $set: { status: "paid" } }
-//     );
-//     res.send(result);
-//   } catch (error) {
-//     console.error("❌ Failed to update payment:", error.message);
-//     res.status(500).send({ error: "Failed to update payment" });
-//   }
-// });
-
-// // ✅ ADMIN: Get All Users
-// app.get("/admin/users", verifyToken, async (req, res) => {
-//   try {
-//     const users = await usersCollection.find().toArray();
-//     res.send(users);
-//   } catch (error) {
-//     console.error("❌ Failed to fetch users:", error.message);
-//     res.status(500).send({ error: "Failed to fetch users" });
-//   }
-// });
-
-// // ✅ ADMIN: Update User Role (user ↔ seller ↔ admin)
-// app.put("/admin/update-role/:id", verifyToken, async (req, res) => {
-//   try {
-//     const id = req.params.id;
-//     const { role } = req.body;
-
-//     const result = await usersCollection.updateOne(
-//       { _id: new ObjectId(id) },
-//       { $set: { role } }
-//     );
-//     res.send(result);
-//   } catch (error) {
-//     console.error("❌ Failed to update user role:", error.message);
-//     res.status(500).send({ error: "Failed to update user role" });
-//   }
-// });
-
-// // ✅ Server Start
-// app.listen(port, () => {
-//   console.log(`🚀 MediMart server running on port ${port}`);
-// });
 
 
 
 
 // const express = require("express");
 // const cors = require("cors");
-// const jwt = require("jsonwebtoken");
 // const cookieParser = require("cookie-parser");
 // const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 // const Stripe = require("stripe");
+// const admin = require("firebase-admin");
 // require("dotenv").config();
+
+// // ✅ Firebase Admin Initialization
+// const serviceAccount = require("./firebase-service-account.json");
+
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+// });
 
 // const app = express();
 // const port = process.env.PORT || 5000;
@@ -289,10 +23,7 @@
 
 // // ✅ Middleware Setup
 // const corsOptions = {
-//   origin: [
-//     "http://localhost:5173",
-//     "https://medimart-client.web.app"
-//   ],
+//   origin: ["http://localhost:5173", "https://medimart-client.web.app"],
 //   credentials: true,
 // };
 // app.use(cors(corsOptions));
@@ -301,9 +32,7 @@
 
 // // ✅ MongoDB Setup
 // const uri = process.env.MONGODB_URI;
-// const client = new MongoClient(uri, {
-//   serverApi: ServerApiVersion.v1,
-// });
+// const client = new MongoClient(uri, { serverApi: ServerApiVersion.v1 });
 
 // let usersCollection;
 // let categoryCollection;
@@ -326,16 +55,20 @@
 // }
 // connectDB();
 
-// // 🔐 JWT Middleware
-// const verifyToken = (req, res, next) => {
+// // 🔐 Firebase Auth Middleware
+// const verifyToken = async (req, res, next) => {
 //   const authHeader = req.headers.authorization;
 //   if (!authHeader) return res.status(401).send("Unauthorized");
+
 //   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-//     if (err) return res.status(403).send("Forbidden");
+
+//   try {
+//     const decoded = await admin.auth().verifyIdToken(token);
 //     req.user = decoded;
 //     next();
-//   });
+//   } catch (err) {
+//     return res.status(403).send("Forbidden");
+//   }
 // };
 
 // // ✅ Health Check
@@ -343,220 +76,146 @@
 //   res.send("💊 MediMart Server is Running!");
 // });
 
-// // ✅ JWT Token Generator
-// app.post("/jwt", async (req, res) => {
-//   const user = req.body;
-//   const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
-//   res.send({ token });
-// });
-
 // // ✅ Save User (Signup/Login)
 // app.post("/users", async (req, res) => {
 //   const user = req.body;
 //   const existingUser = await usersCollection.findOne({ email: user.email });
-
-//   if (existingUser) {
-//     return res.send({ message: "User already exists" });
-//   }
-
+//   if (existingUser) return res.send({ message: "User already exists" });
 //   const result = await usersCollection.insertOne(user);
 //   res.send(result);
 // });
 
-// // ✅ Get role by email for Dashboard Access
+// // ✅ 🔥 Secure Role Checker with Token Verification
 // app.get("/users/role/:email", verifyToken, async (req, res) => {
 //   const email = req.params.email;
 
-//   try {
-//     const user = await usersCollection.findOne({ email });
-
-//     if (!user || !user.role) {
-//       return res.status(404).send({ role: null });
-//     }
-
-//     res.send({ role: user.role });
-//   } catch (error) {
-//     console.error("❌ Error in role check:", error.message);
-//     res.status(500).send({ error: "Failed to get role" });
+//   // ✅ Ensure user identity matches token
+//   if (req.user.email !== email) {
+//     return res.status(403).send("Forbidden");
 //   }
+
+//   const user = await usersCollection.findOne({ email });
+//   res.send({ role: user?.role || "user" });
 // });
 
 // // ✅ Advertised Medicines
 // app.get("/advertised", async (req, res) => {
-//   try {
-//     const result = await advertiseCollection.find({ isActive: true }).toArray();
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to load advertised products" });
-//   }
+//   const result = await advertiseCollection.find({ isActive: true }).toArray();
+//   res.send(result);
 // });
 
 // app.post("/advertised", verifyToken, async (req, res) => {
-//   try {
-//     const item = req.body;
-//     if (!item.name || !item.image || !item.description) {
-//       return res.status(400).send({ error: "Missing required fields" });
-//     }
+//   const item = req.body;
+//   const newAdvertise = {
+//     ...item,
+//     isActive: true,
+//     createdAt: new Date(),
+//   };
+//   const result = await advertiseCollection.insertOne(newAdvertise);
+//   res.status(201).send(result);
+// });
 
-//     const newAdvertise = {
-//       name: item.name,
-//       image: item.image,
-//       description: item.description,
-//       isActive: true,
-//       createdAt: new Date(),
-//     };
+// app.get("/admin/advertised", verifyToken, async (req, res) => {
+//   const result = await advertiseCollection.find().toArray();
+//   res.send(result);
+// });
 
-//     const result = await advertiseCollection.insertOne(newAdvertise);
-//     res.status(201).send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to add advertised product" });
-//   }
+// app.put("/admin/advertised/:id", verifyToken, async (req, res) => {
+//   const id = req.params.id;
+//   const { isActive } = req.body;
+//   const result = await advertiseCollection.updateOne(
+//     { _id: new ObjectId(id) },
+//     { $set: { isActive } }
+//   );
+//   res.send(result);
 // });
 
 // // ✅ Categories
 // app.get("/categories", async (req, res) => {
-//   try {
-//     const result = await categoryCollection.find().toArray();
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to fetch categories" });
-//   }
+//   const result = await categoryCollection.find().toArray();
+//   res.send(result);
 // });
 
 // app.post("/categories", verifyToken, async (req, res) => {
-//   try {
-//     const category = req.body;
-//     const result = await categoryCollection.insertOne(category);
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to add category" });
-//   }
+//   const result = await categoryCollection.insertOne(req.body);
+//   res.send(result);
 // });
 
 // app.put("/categories/:id", verifyToken, async (req, res) => {
-//   try {
-//     const id = req.params.id;
-//     const updated = req.body;
-//     const result = await categoryCollection.updateOne(
-//       { _id: new ObjectId(id) },
-//       { $set: updated }
-//     );
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to update category" });
-//   }
+//   const id = req.params.id;
+//   const result = await categoryCollection.updateOne(
+//     { _id: new ObjectId(id) },
+//     { $set: req.body }
+//   );
+//   res.send(result);
 // });
 
 // app.delete("/categories/:id", verifyToken, async (req, res) => {
-//   try {
-//     const id = req.params.id;
-//     const result = await categoryCollection.deleteOne({ _id: new ObjectId(id) });
-//     res.send(result);
-//   } catch {
-//     res.status(500).send({ error: "Failed to delete category" });
-//   }
+//   const id = req.params.id;
+//   const result = await categoryCollection.deleteOne({ _id: new ObjectId(id) });
+//   res.send(result);
 // });
 
-// // ✅ Category-wise Medicines
+// // ✅ Medicines
+// app.get("/medicines", async (req, res) => {
+//   const result = await medicineCollection.find().toArray();
+//   res.send(result);
+// });
+
+// app.get("/medicines/discounted", async (req, res) => {
+//   const result = await medicineCollection
+//     .find({ discountedPrice: { $exists: true, $ne: null } })
+//     .toArray();
+//   res.send(result);
+// });
+
 // app.get("/category/:id", async (req, res) => {
 //   const categoryId = req.params.id;
-//   let query;
-//   try {
-//     query = { categoryId: new ObjectId(categoryId) };
-//   } catch {
-//     query = { categoryId };
-//   }
-
-//   try {
-//     const result = await medicineCollection.find(query).toArray();
-//     res.send(result);
-//   } catch (error) {
-//     res.status(500).send({ error: "Failed to fetch medicines for this category" });
-//   }
-// });
-
-// // ✅ ALL Medicines for Shop Page
-// app.get("/medicines", async (req, res) => {
-//   try {
-//     const result = await medicineCollection.find().toArray();
-//     res.send(result);
-//   } catch (error) {
-//     res.status(500).send({ error: "Failed to fetch all medicines" });
-//   }
-// });
-
-// // ✅ Discounted Medicines Only
-// app.get("/medicines/discounted", async (req, res) => {
-//   try {
-//     const result = await medicineCollection.find({
-//       discountedPrice: { $exists: true, $ne: null },
-//     }).toArray();
-//     res.send(result);
-//   } catch (error) {
-//     res.status(500).send({ error: "Failed to fetch discounted medicines" });
-//   }
+//   const query = { categoryId };
+//   const result = await medicineCollection.find(query).toArray();
+//   res.send(result);
 // });
 
 // // ✅ Payments
 // app.post("/payments", verifyToken, async (req, res) => {
-//   try {
-//     const paymentInfo = req.body;
-//     paymentInfo.createdAt = new Date();
-//     const result = await paymentsCollection.insertOne(paymentInfo);
-//     res.send(result);
-//   } catch (error) {
-//     res.status(500).send({ error: "Payment failed to record." });
-//   }
+//   const paymentInfo = { ...req.body, createdAt: new Date() };
+//   const result = await paymentsCollection.insertOne(paymentInfo);
+//   res.send(result);
 // });
 
-// // ✅ ADMIN: Get All Payments
 // app.get("/admin/payments", verifyToken, async (req, res) => {
-//   try {
-//     const payments = await paymentsCollection.find().toArray();
-//     res.send(payments);
-//   } catch (error) {
-//     res.status(500).send({ error: "Failed to fetch payments" });
-//   }
+//   const result = await paymentsCollection.find().toArray();
+//   res.send(result);
 // });
 
-// // ✅ ADMIN: Update Payment Status
 // app.put("/admin/payments/:id", verifyToken, async (req, res) => {
 //   const id = req.params.id;
-//   try {
-//     const result = await paymentsCollection.updateOne(
-//       { _id: new ObjectId(id) },
-//       { $set: { status: "paid" } }
-//     );
-//     res.send(result);
-//   } catch (error) {
-//     res.status(500).send({ error: "Failed to update payment" });
-//   }
+//   const result = await paymentsCollection.updateOne(
+//     { _id: new ObjectId(id) },
+//     { $set: { status: "paid" } }
+//   );
+//   res.send(result);
 // });
 
-// // ✅ ADMIN: Get All Users
+// app.get("/payments/:email", verifyToken, async (req, res) => {
+//   const email = req.params.email;
+//   const result = await paymentsCollection.find({ buyerEmail: email }).toArray();
+//   res.send(result);
+// });
+
+// // ✅ Users
 // app.get("/admin/users", verifyToken, async (req, res) => {
-//   try {
-//     const users = await usersCollection.find().toArray();
-//     res.send(users);
-//   } catch (error) {
-//     res.status(500).send({ error: "Failed to fetch users" });
-//   }
+//   const result = await usersCollection.find().toArray();
+//   res.send(result);
 // });
 
-// // ✅ ADMIN: Update User Role
 // app.put("/admin/update-role/:id", verifyToken, async (req, res) => {
-//   try {
-//     const id = req.params.id;
-//     const { role } = req.body;
-
-//     const result = await usersCollection.updateOne(
-//       { _id: new ObjectId(id) },
-//       { $set: { role } }
-//     );
-//     res.send(result);
-//   } catch (error) {
-//     res.status(500).send({ error: "Failed to update user role" });
-//   }
+//   const id = req.params.id;
+//   const result = await usersCollection.updateOne(
+//     { _id: new ObjectId(id) },
+//     { $set: { role: req.body.role } }
+//   );
+//   res.send(result);
 // });
 
 // // ✅ Start Server
@@ -568,11 +227,18 @@
 
 // const express = require("express");
 // const cors = require("cors");
-// const jwt = require("jsonwebtoken");
 // const cookieParser = require("cookie-parser");
 // const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 // const Stripe = require("stripe");
+// const admin = require("firebase-admin");
 // require("dotenv").config();
+
+// // ✅ Firebase Admin Initialization
+// const serviceAccount = require("./firebase-service-account.json");
+
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+// });
 
 // const app = express();
 // const port = process.env.PORT || 5000;
@@ -612,16 +278,20 @@
 // }
 // connectDB();
 
-// // 🔐 JWT Middleware
-// const verifyToken = (req, res, next) => {
+// // 🔐 Firebase Auth Middleware
+// const verifyToken = async (req, res, next) => {
 //   const authHeader = req.headers.authorization;
 //   if (!authHeader) return res.status(401).send("Unauthorized");
+
 //   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-//     if (err) return res.status(403).send("Forbidden");
+
+//   try {
+//     const decoded = await admin.auth().verifyIdToken(token);
 //     req.user = decoded;
 //     next();
-//   });
+//   } catch (err) {
+//     return res.status(403).send("Forbidden");
+//   }
 // };
 
 // // ✅ Health Check
@@ -629,28 +299,29 @@
 //   res.send("💊 MediMart Server is Running!");
 // });
 
-// // ✅ JWT Token Generator
-// app.post("/jwt", async (req, res) => {
-//   const user = req.body;
-//   const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
-//   res.send({ token });
-// });
-
-// // ✅ Save User (Signup/Login)
+// // ✅ Save User with default role if not exists
 // app.post("/users", async (req, res) => {
 //   const user = req.body;
 //   const existingUser = await usersCollection.findOne({ email: user.email });
-//   if (existingUser) return res.send({ message: "User already exists" });
+
+//   if (existingUser) {
+//     return res.send({ message: "User already exists" });
+//   }
+
+//   user.role = user.role || "user"; // ✅ Set default role
 //   const result = await usersCollection.insertOne(user);
 //   res.send(result);
 // });
 
-// // ✅ Get role by email
+// // ✅ Get User Role with Firebase Auth Validation
 // app.get("/users/role/:email", verifyToken, async (req, res) => {
 //   const email = req.params.email;
+//   if (req.user.email !== email) {
+//     return res.status(403).send("Forbidden");
+//   }
+
 //   const user = await usersCollection.findOne({ email });
-//   if (!user) return res.send({ role: null });
-//   res.send({ role: user.role });
+//   res.send({ role: user?.role || "user" });
 // });
 
 // // ✅ Advertised Medicines
@@ -754,11 +425,13 @@
 
 // app.get("/payments/:email", verifyToken, async (req, res) => {
 //   const email = req.params.email;
-//   const result = await paymentsCollection.find({ buyerEmail: email }).toArray();
+//   const result = await paymentsCollection
+//     .find({ buyerEmail: email })
+//     .toArray();
 //   res.send(result);
 // });
 
-// // ✅ Users
+// // ✅ Users for Admin Panel
 // app.get("/admin/users", verifyToken, async (req, res) => {
 //   const result = await usersCollection.find().toArray();
 //   res.send(result);
@@ -773,17 +446,10 @@
 //   res.send(result);
 // });
 
-// // ✅ Server Start
+// // ✅ Start Server
 // app.listen(port, () => {
 //   console.log(`🚀 MediMart server running on port ${port}`);
 // });
-
-
-
-
-
-
-
 
 
 
@@ -808,11 +474,18 @@
 
 // const express = require("express");
 // const cors = require("cors");
-// const jwt = require("jsonwebtoken");
 // const cookieParser = require("cookie-parser");
 // const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 // const Stripe = require("stripe");
+// const admin = require("firebase-admin");
 // require("dotenv").config();
+
+// // ✅ Firebase Admin Initialization
+// const serviceAccount = require("./firebase-service-account.json");
+
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+// });
 
 // const app = express();
 // const port = process.env.PORT || 5000;
@@ -852,16 +525,20 @@
 // }
 // connectDB();
 
-// // 🔐 JWT Middleware
-// const verifyToken = (req, res, next) => {
+// // 🔐 Firebase Auth Middleware
+// const verifyToken = async (req, res, next) => {
 //   const authHeader = req.headers.authorization;
 //   if (!authHeader) return res.status(401).send("Unauthorized");
+
 //   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-//     if (err) return res.status(403).send("Forbidden");
+
+//   try {
+//     const decoded = await admin.auth().verifyIdToken(token);
 //     req.user = decoded;
 //     next();
-//   });
+//   } catch (err) {
+//     return res.status(403).send("Forbidden");
+//   }
 // };
 
 // // ✅ Health Check
@@ -869,34 +546,31 @@
 //   res.send("💊 MediMart Server is Running!");
 // });
 
-// // ✅ JWT Token Generator
-// app.post("/jwt", async (req, res) => {
-//   const user = req.body;
-//   const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
-//   res.send({ token });
-// });
-
-// // ✅ Save User (Signup/Login)
+// // ✅ Save User with default role if not exists
 // app.post("/users", async (req, res) => {
 //   const user = req.body;
 //   const existingUser = await usersCollection.findOne({ email: user.email });
-//   if (existingUser) return res.send({ message: "User already exists" });
+
+//   if (existingUser) {
+//     return res.send({ message: "User already exists" });
+//   }
+
+//   user.role = user.role || "user";
 //   const result = await usersCollection.insertOne(user);
 //   res.send(result);
 // });
 
-// // ✅ 🔥 Fixed: Secure Role Checker
+// // ✅ FIXED: Get User Role with Firebase Auth Validation
 // app.get("/users/role/:email", verifyToken, async (req, res) => {
 //   const email = req.params.email;
 
-//   // ✅ Check if token email matches requested email
-//   if (req.user.email !== email) {
+//   // ✅ Fix: make comparison case-insensitive to avoid mismatch
+//   if (req.user.email.toLowerCase() !== email.toLowerCase()) {
 //     return res.status(403).send("Forbidden");
 //   }
 
-//   const user = await usersCollection.findOne({ email });
-//   if (!user) return res.send({ role: null });
-//   res.send({ role: user.role });
+//   const user = await usersCollection.findOne({ email: { $regex: `^${email}$`, $options: "i" } });
+//   res.send({ role: user?.role || "user" });
 // });
 
 // // ✅ Advertised Medicines
@@ -1000,11 +674,13 @@
 
 // app.get("/payments/:email", verifyToken, async (req, res) => {
 //   const email = req.params.email;
-//   const result = await paymentsCollection.find({ buyerEmail: email }).toArray();
+//   const result = await paymentsCollection
+//     .find({ buyerEmail: email })
+//     .toArray();
 //   res.send(result);
 // });
 
-// // ✅ Users
+// // ✅ Users for Admin Panel
 // app.get("/admin/users", verifyToken, async (req, res) => {
 //   const result = await usersCollection.find().toArray();
 //   res.send(result);
@@ -1019,10 +695,39 @@
 //   res.send(result);
 // });
 
-// // ✅ Server Start
+// // ✅ Start Server
 // app.listen(port, () => {
 //   console.log(`🚀 MediMart server running on port ${port}`);
 // });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1041,7 +746,7 @@ const Stripe = require("stripe");
 const admin = require("firebase-admin");
 require("dotenv").config();
 
-// ✅ Firebase Admin Initialization
+//  Firebase Admin Initialization
 const serviceAccount = require("./firebase-service-account.json");
 
 admin.initializeApp({
@@ -1052,7 +757,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-// ✅ Middleware Setup
+//  Middleware Setup
 const corsOptions = {
   origin: ["http://localhost:5173", "https://medimart-client.web.app"],
   credentials: true,
@@ -1061,7 +766,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ MongoDB Setup
+//  MongoDB Setup
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, { serverApi: ServerApiVersion.v1 });
 
@@ -1079,14 +784,14 @@ async function connectDB() {
     medicineCollection = db.collection("medicines");
     advertiseCollection = db.collection("advertised");
     paymentsCollection = db.collection("payments");
-    console.log("✅ MongoDB connected");
+    console.log(" MongoDB connected");
   } catch (err) {
     console.error("MongoDB connection failed:", err.message);
   }
 }
 connectDB();
 
-// 🔐 Firebase Auth Middleware
+//  Firebase Auth Middleware
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).send("Unauthorized");
@@ -1102,34 +807,45 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// ✅ Health Check
+//  Health Check
 app.get("/", (req, res) => {
   res.send("💊 MediMart Server is Running!");
 });
 
-// ✅ Save User (Signup/Login)
+//  Save User with default role if not exists
 app.post("/users", async (req, res) => {
   const user = req.body;
   const existingUser = await usersCollection.findOne({ email: user.email });
-  if (existingUser) return res.send({ message: "User already exists" });
+
+  if (existingUser) {
+    return res.send({ message: "User already exists" });
+  }
+
+  user.role = user.role || "user";
   const result = await usersCollection.insertOne(user);
   res.send(result);
 });
 
-// ✅ 🔥 Secure Role Checker with Token Verification
+//  ADD THIS ROUTE: Get user by email (used by useRole hook)
+app.get("/users/:email", async (req, res) => {
+  const email = req.params.email;
+  const user = await usersCollection.findOne({ email });
+  res.send(user || {});
+});
+
+//  Get User Role with Firebase Auth Validation
 app.get("/users/role/:email", verifyToken, async (req, res) => {
   const email = req.params.email;
 
-  // ✅ Ensure user identity matches token
-  if (req.user.email !== email) {
+  if (req.user.email.toLowerCase() !== email.toLowerCase()) {
     return res.status(403).send("Forbidden");
   }
 
-  const user = await usersCollection.findOne({ email });
+  const user = await usersCollection.findOne({ email: { $regex: `^${email}$`, $options: "i" } });
   res.send({ role: user?.role || "user" });
 });
 
-// ✅ Advertised Medicines
+//  Advertised Medicines
 app.get("/advertised", async (req, res) => {
   const result = await advertiseCollection.find({ isActive: true }).toArray();
   res.send(result);
@@ -1161,7 +877,7 @@ app.put("/admin/advertised/:id", verifyToken, async (req, res) => {
   res.send(result);
 });
 
-// ✅ Categories
+//  Categories
 app.get("/categories", async (req, res) => {
   const result = await categoryCollection.find().toArray();
   res.send(result);
@@ -1187,7 +903,7 @@ app.delete("/categories/:id", verifyToken, async (req, res) => {
   res.send(result);
 });
 
-// ✅ Medicines
+//  Medicines
 app.get("/medicines", async (req, res) => {
   const result = await medicineCollection.find().toArray();
   res.send(result);
@@ -1207,7 +923,7 @@ app.get("/category/:id", async (req, res) => {
   res.send(result);
 });
 
-// ✅ Payments
+//  Payments
 app.post("/payments", verifyToken, async (req, res) => {
   const paymentInfo = { ...req.body, createdAt: new Date() };
   const result = await paymentsCollection.insertOne(paymentInfo);
@@ -1230,11 +946,13 @@ app.put("/admin/payments/:id", verifyToken, async (req, res) => {
 
 app.get("/payments/:email", verifyToken, async (req, res) => {
   const email = req.params.email;
-  const result = await paymentsCollection.find({ buyerEmail: email }).toArray();
+  const result = await paymentsCollection
+    .find({ buyerEmail: email })
+    .toArray();
   res.send(result);
 });
 
-// ✅ Users
+//  Users for Admin Panel
 app.get("/admin/users", verifyToken, async (req, res) => {
   const result = await usersCollection.find().toArray();
   res.send(result);
@@ -1253,6 +971,3 @@ app.put("/admin/update-role/:id", verifyToken, async (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 MediMart server running on port ${port}`);
 });
-
-
-
