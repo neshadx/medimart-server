@@ -245,6 +245,10 @@ const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const Stripe = require("stripe");
 const admin = require("firebase-admin");
+const fileUpload = require("express-fileupload");
+const path = require("path");
+// const fs = require("fs");
+
 require("dotenv").config();
 
 // ✅ Firebase Admin Initialization
@@ -266,6 +270,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+app.use(fileUpload());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 // ✅ MongoDB Setup
 const uri = process.env.MONGODB_URI;
@@ -349,16 +356,16 @@ app.get("/advertised", async (req, res) => {
   res.send(result);
 });
 
-app.post("/advertised", verifyToken, async (req, res) => {
-  const item = req.body;
-  const newAdvertise = {
-    ...item,
-    isActive: true,
-    createdAt: new Date(),
-  };
-  const result = await advertiseCollection.insertOne(newAdvertise);
-  res.status(201).send(result);
-});
+// app.post("/advertised", verifyToken, async (req, res) => {
+//   const item = req.body;
+//   const newAdvertise = {
+//     ...item,
+//     isActive: true,
+//     createdAt: new Date(),
+//   };
+//   const result = await advertiseCollection.insertOne(newAdvertise);
+//   res.status(201).send(result);
+// });
 
 // ✅ 🔄 FIXED: Return seller info with advertised items
 app.get("/admin/advertised", verifyToken, async (req, res) => {
@@ -458,10 +465,15 @@ app.get("/category/:id", async (req, res) => {
 
 // ✅ Payments
 app.post("/payments", verifyToken, async (req, res) => {
-  const paymentInfo = { ...req.body, createdAt: new Date() };
+  const paymentInfo = {
+    ...req.body,
+    status: "pending", // ✅ Default payment status
+    createdAt: new Date()
+  };
   const result = await paymentsCollection.insertOne(paymentInfo);
   res.send(result);
 });
+
 
 app.get("/admin/payments", verifyToken, async (req, res) => {
   const result = await paymentsCollection.find().toArray();
@@ -499,6 +511,194 @@ app.put("/admin/update-role/:id", verifyToken, async (req, res) => {
   );
   res.send(result);
 });
+
+const fs = require("fs");
+
+// 🔹 POST Medicine
+app.post("/medicines", verifyToken, async (req, res) => {
+  try {
+    const { name, generic, description, company, category, unit, price, discount, seller } = req.body;
+    const file = req.files?.image;
+
+    if (!file) return res.status(400).send("Image required");
+
+    const fileName = Date.now() + "_" + file.name;
+    const filePath = path.join(__dirname, "uploads", fileName);
+    await file.mv(filePath);
+
+    const medicine = {
+      name,
+      generic,
+      description,
+      image: `/uploads/${fileName}`,
+      company,
+      category,
+      unit,
+      price: parseFloat(price),
+      discount: parseFloat(discount),
+      seller,
+      createdAt: new Date()
+    };
+
+    const result = await medicineCollection.insertOne(medicine);
+    res.status(201).send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Medicine create failed");
+  }
+});
+
+
+// 🔹 PUT Update Medicine (Fixed)
+app.put("/medicines/:id", verifyToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const {
+      name,
+      generic,
+      description,
+      company,
+      category,
+      unit,
+      price,
+      discount,
+    } = req.body;
+
+    const updatedData = {
+      name,
+      generic,
+      description,
+      company,
+      category,
+      unit,
+      price: parseFloat(price),
+      discount: parseFloat(discount),
+      updatedAt: new Date(),
+    };
+
+    // ✅ Check if file uploaded (optional for update)
+    if (req.files && req.files.image) {
+      const file = req.files.image;
+      const fileName = Date.now() + "_" + file.name;
+      const filePath = path.join(__dirname, "uploads", fileName);
+
+      await file.mv(filePath);
+      updatedData.image = `/uploads/${fileName}`;
+    }
+
+    const result = await medicineCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updatedData }
+    );
+
+    res.send(result);
+  } catch (err) {
+    console.error("Update Error:", err.message);
+    res.status(500).send("Update failed");
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+// 🔹 DELETE Medicine
+app.delete("/medicines/:id", verifyToken, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await medicineCollection.deleteOne({ _id: new ObjectId(id) });
+    res.send(result);
+  } catch (err) {
+    res.status(500).send("Delete failed");
+  }
+});
+
+
+
+// ✅ Companies
+app.get("/companies", async (req, res) => {
+  try {
+    const result = await client.db("medimartDB").collection("companies").find().toArray();
+    res.send(result);
+  } catch (err) {
+    console.error("Error fetching companies:", err.message);
+    res.status(500).send("Server error");
+  }
+});
+
+app.post("/companies", verifyToken, async (req, res) => {
+  try {
+    const result = await client.db("medimartDB").collection("companies").insertOne(req.body);
+    res.send(result);
+  } catch (err) {
+    res.status(500).send("Failed to add company");
+  }
+});
+
+// ✅ Seller Payment Route
+app.get("/seller/payments/:email", verifyToken, async (req, res) => {
+  const email = req.params.email;
+  try {
+    const result = await paymentsCollection
+      .find({ sellerEmail: email })
+      .toArray();
+    res.send(result);
+  } catch (err) {
+    console.error("❌ Seller payment fetch error:", err.message);
+    res.status(500).send("Server error");
+  }
+});
+
+
+
+
+// ✅ POST Advertised — with image upload + duplicate check
+app.post("/advertised", verifyToken, async (req, res) => {
+  try {
+    const file = req.files?.image;
+    const { description, sellerEmail } = req.body;
+
+    if (!file || !description || !sellerEmail) {
+      return res.status(400).send("Missing required fields");
+    }
+
+    const duplicate = await advertiseCollection.findOne({
+      sellerEmail,
+      description,
+    });
+
+    if (duplicate) {
+      return res.status(409).send({ message: "Advertisement already submitted" });
+    }
+
+    const fileName = Date.now() + "_" + file.name;
+    const filePath = path.join(__dirname, "uploads", fileName);
+    await file.mv(filePath);
+
+    const newAd = {
+      image: `/uploads/${fileName}`,
+      description,
+      sellerEmail,
+      isActive: false,
+      createdAt: new Date(),
+    };
+
+    const result = await advertiseCollection.insertOne(newAd);
+    res.status(201).send(result);
+  } catch (err) {
+    console.error("Advertisement error:", err.message);
+    res.status(500).send("Failed to submit advertisement");
+  }
+});
+
+
 
 // ✅ Start Server
 app.listen(port, () => {
