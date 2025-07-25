@@ -515,16 +515,68 @@ app.put("/admin/update-role/:id", verifyToken, async (req, res) => {
 const fs = require("fs");
 
 // 🔹 POST Medicine
+// app.post("/medicines", verifyToken, async (req, res) => {
+//   try {
+//     const { name, generic, description, company, category, unit, price, discount, seller } = req.body;
+//     const file = req.files?.image;
+
+//     if (!file) return res.status(400).send("Image required");
+
+//     const fileName = Date.now() + "_" + file.name;
+//     const filePath = path.join(__dirname, "uploads", fileName);
+//     await file.mv(filePath);
+
+//     const medicine = {
+//       name,
+//       generic,
+//       description,
+//       image: `/uploads/${fileName}`,
+//       company,
+//       category,
+//       unit,
+//       price: parseFloat(price),
+//       discount: parseFloat(discount),
+//       seller,
+//       createdAt: new Date()
+//     };
+
+//     const result = await medicineCollection.insertOne(medicine);
+//     res.status(201).send(result);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send("Medicine create failed");
+//   }
+// });
+
+// 🔹 POST Medicine (Fixed with originalPrice, discountedPrice, stock, rating)
 app.post("/medicines", verifyToken, async (req, res) => {
   try {
-    const { name, generic, description, company, category, unit, price, discount, seller } = req.body;
-    const file = req.files?.image;
+    const {
+      name,
+      generic,
+      description,
+      company,
+      category,
+      unit,
+      price,
+      discount,
+      seller,
+      stock,
+    } = req.body;
 
+    const file = req.files?.image;
     if (!file) return res.status(400).send("Image required");
 
     const fileName = Date.now() + "_" + file.name;
     const filePath = path.join(__dirname, "uploads", fileName);
     await file.mv(filePath);
+
+    const numericPrice = parseFloat(price);
+    const numericDiscount = parseFloat(discount);
+
+    const discountedPrice = Math.round(
+      numericPrice - (numericPrice * numericDiscount) / 100
+    );
 
     const medicine = {
       name,
@@ -534,10 +586,14 @@ app.post("/medicines", verifyToken, async (req, res) => {
       company,
       category,
       unit,
-      price: parseFloat(price),
-      discount: parseFloat(discount),
+      price: numericPrice,
+      discount: numericDiscount,
+      originalPrice: numericPrice,
+      discountedPrice: discountedPrice,
+      stock: parseInt(stock) || 0,
+      rating: 0, // ✅ Initial rating
       seller,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
     const result = await medicineCollection.insertOne(medicine);
@@ -547,6 +603,10 @@ app.post("/medicines", verifyToken, async (req, res) => {
     res.status(500).send("Medicine create failed");
   }
 });
+
+
+
+
 
 
 // 🔹 PUT Update Medicine (Fixed)
