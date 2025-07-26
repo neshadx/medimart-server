@@ -229,7 +229,7 @@
 //   res.send(result);
 // });
 
-// // ✅ Start Server
+// //  Start Server
 // app.listen(port, () => {
 //   console.log(`🚀 MediMart server running on port ${port}`);
 // });
@@ -251,7 +251,7 @@ const path = require("path");
 
 require("dotenv").config();
 
-// ✅ Firebase Admin Initialization
+//  Firebase Admin Initialization
 const serviceAccount = require("./firebase-service-account.json");
 
 admin.initializeApp({
@@ -262,7 +262,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
-// ✅ Middleware Setup
+//  Middleware Setup
 const corsOptions = {
   origin: ["http://localhost:5173", "https://medimart-client.web.app"],
   credentials: true,
@@ -274,7 +274,7 @@ app.use(fileUpload());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 
-// ✅ MongoDB Setup
+//  MongoDB Setup
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, { serverApi: ServerApiVersion.v1 });
 
@@ -292,14 +292,14 @@ async function connectDB() {
     medicineCollection = db.collection("medicines");
     advertiseCollection = db.collection("advertised");
     paymentsCollection = db.collection("payments");
-    console.log("✅ MongoDB connected");
+    console.log(" MongoDB connected");
   } catch (err) {
     console.error("MongoDB connection failed:", err.message);
   }
 }
 connectDB();
 
-// 🔐 Firebase Auth Middleware
+//  Firebase Auth Middleware
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).send("Unauthorized");
@@ -315,24 +315,85 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
-// ✅ Health Check
+//  Health Check
 app.get("/", (req, res) => {
-  res.send("💊 MediMart Server is Running!");
+  res.send(" MediMart Server is Running!");
 });
 
-// ✅ Save User
+//  Save User
+// app.post("/users", async (req, res) => {
+//   const user = req.body;
+//   const existingUser = await usersCollection.findOne({ email: user.email });
+
+//   if (existingUser) {
+//     return res.send({ message: "User already exists" });
+//   }
+
+//   user.role = user.role || "user";
+//   const result = await usersCollection.insertOne(user);
+//   res.send(result);
+// });
+
+// app.post("/users", async (req, res) => {
+//   const { email, displayName, photoURL } = req.body;
+
+//   const existingUser = await usersCollection.findOne({ email });
+
+//   if (existingUser) {
+//     return res.send({ message: "User already exists" });
+//   }
+
+//   const newUser = {
+//     email,
+//     name: displayName || "User",
+//     photoURL: photoURL || null,
+//     role: "user",
+//     createdAt: new Date(),
+//   };
+
+//   const result = await usersCollection.insertOne(newUser);
+//   res.send(result);
+// });
 app.post("/users", async (req, res) => {
-  const user = req.body;
-  const existingUser = await usersCollection.findOne({ email: user.email });
+  const { email, displayName, photoURL } = req.body;
+
+  const existingUser = await usersCollection.findOne({ email });
 
   if (existingUser) {
+    //  photoURL null chilo, ekhon thakle update kore dibo
+    if (!existingUser.photoURL && photoURL) {
+      await usersCollection.updateOne(
+        { email },
+        {
+          $set: {
+            photoURL,
+            name: displayName || "User",
+          },
+        }
+      );
+    }
+
     return res.send({ message: "User already exists" });
   }
 
-  user.role = user.role || "user";
-  const result = await usersCollection.insertOne(user);
+  const newUser = {
+    email,
+    name: displayName || "User",
+    photoURL: photoURL || null,
+    role: "user",
+    createdAt: new Date(),
+  };
+
+  const result = await usersCollection.insertOne(newUser);
   res.send(result);
 });
+
+
+
+
+
+
+
 
 app.get("/users/:email", async (req, res) => {
   const email = req.params.email;
@@ -350,7 +411,7 @@ app.get("/users/role/:email", verifyToken, async (req, res) => {
   res.send({ role: user?.role || "user" });
 });
 
-// ✅ Advertised Medicines
+//  Advertised Medicines
 app.get("/advertised", async (req, res) => {
   const result = await advertiseCollection.find({ isActive: true }).toArray();
   res.send(result);
@@ -367,7 +428,7 @@ app.get("/advertised", async (req, res) => {
 //   res.status(201).send(result);
 // });
 
-// ✅ 🔄 FIXED: Return seller info with advertised items
+//   FIXED: Return seller info with advertised items
 app.get("/admin/advertised", verifyToken, async (req, res) => {
   try {
     const result = await advertiseCollection.aggregate([
@@ -417,7 +478,7 @@ app.put("/admin/advertised/:id", verifyToken, async (req, res) => {
   res.send(result);
 });
 
-// ✅ Categories
+//  Categories
 app.get("/categories", async (req, res) => {
   const result = await categoryCollection.find().toArray();
   res.send(result);
@@ -443,7 +504,7 @@ app.delete("/categories/:id", verifyToken, async (req, res) => {
   res.send(result);
 });
 
-// ✅ Medicines
+//  Medicines
 app.get("/medicines", async (req, res) => {
   const result = await medicineCollection.find().toArray();
   res.send(result);
@@ -463,11 +524,11 @@ app.get("/category/:id", async (req, res) => {
   res.send(result);
 });
 
-// ✅ Payments
+//  Payments
 app.post("/payments", verifyToken, async (req, res) => {
   const paymentInfo = {
     ...req.body,
-    status: "pending", // ✅ Default payment status
+    status: "pending", //  Default payment status
     createdAt: new Date()
   };
   const result = await paymentsCollection.insertOne(paymentInfo);
@@ -497,7 +558,7 @@ app.get("/payments/:email", verifyToken, async (req, res) => {
   res.send(result);
 });
 
-// ✅ Users for Admin Panel
+//  Users for Admin Panel
 app.get("/admin/users", verifyToken, async (req, res) => {
   const result = await usersCollection.find().toArray();
   res.send(result);
@@ -591,7 +652,7 @@ app.post("/medicines", verifyToken, async (req, res) => {
       originalPrice: numericPrice,
       discountedPrice: discountedPrice,
       stock: parseInt(stock) || 0,
-      rating: 0, // ✅ Initial rating
+      rating: 0, //  Initial rating
       seller,
       createdAt: new Date(),
     };
@@ -636,7 +697,7 @@ app.put("/medicines/:id", verifyToken, async (req, res) => {
       updatedAt: new Date(),
     };
 
-    // ✅ Check if file uploaded (optional for update)
+    //  Check if file uploaded (optional for update)
     if (req.files && req.files.image) {
       const file = req.files.image;
       const fileName = Date.now() + "_" + file.name;
@@ -682,7 +743,7 @@ app.delete("/medicines/:id", verifyToken, async (req, res) => {
 
 
 
-// ✅ Companies
+//  Companies
 app.get("/companies", async (req, res) => {
   try {
     const result = await client.db("medimartDB").collection("companies").find().toArray();
@@ -702,7 +763,7 @@ app.post("/companies", verifyToken, async (req, res) => {
   }
 });
 
-// ✅ Seller Payment Route
+//  Seller Payment Route
 app.get("/seller/payments/:email", verifyToken, async (req, res) => {
   const email = req.params.email;
   try {
@@ -711,7 +772,7 @@ app.get("/seller/payments/:email", verifyToken, async (req, res) => {
       .toArray();
     res.send(result);
   } catch (err) {
-    console.error("❌ Seller payment fetch error:", err.message);
+    console.error(" Seller payment fetch error:", err.message);
     res.status(500).send("Server error");
   }
 });
@@ -719,7 +780,7 @@ app.get("/seller/payments/:email", verifyToken, async (req, res) => {
 
 
 
-// ✅ POST Advertised — with image upload + duplicate check
+//  POST Advertised — with image upload + duplicate check
 app.post("/advertised", verifyToken, async (req, res) => {
   try {
     const file = req.files?.image;
@@ -758,9 +819,44 @@ app.post("/advertised", verifyToken, async (req, res) => {
   }
 });
 
+//  Update user profile (name + photo)
+app.patch("/api/user/update-profile", verifyToken, async (req, res) => {
+  try {
+    const email = req.user.email;
+    const displayName = req.body.displayName;
+
+    let photoURL = null;
+
+    //  Handle photo upload if exists
+    const file = req.files?.photo;
+    if (file) {
+      const fileName = Date.now() + "_" + file.name;
+      const filePath = path.join(__dirname, "uploads", fileName);
+      await file.mv(filePath);
+      photoURL = `/uploads/${fileName}`;
+    }
+
+    const updateDoc = { displayName };
+    if (photoURL) updateDoc.photoURL = photoURL;
+
+    const result = await usersCollection.updateOne(
+      { email },
+      { $set: updateDoc }
+    );
+
+    //  Send back modifiedCount + image path
+    res.send({
+      modifiedCount: result.modifiedCount,
+      photoURL: photoURL, // frontend e lagbe
+    });
+  } catch (err) {
+    console.error(" Update profile failed:", err.message);
+    res.status(500).send("Profile update failed");
+  }
+});
 
 
-// ✅ Start Server
+//  Start Server
 app.listen(port, () => {
-  console.log(`🚀 MediMart server running on port ${port}`);
+  console.log(` MediMart server running on port ${port}`);
 });
