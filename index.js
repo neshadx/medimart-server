@@ -274,7 +274,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 //  Middleware Setup
 const corsOptions = {
-  origin: ["http://localhost:5173", "https://medimart-client.web.app"],
+  origin: ["http://localhost:5173", "https://medimart-hub.netlify.app"],
   credentials: true,
 };
 app.use(cors(corsOptions));
